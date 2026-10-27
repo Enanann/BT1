@@ -1,0 +1,29 @@
+{
+  "source": "data/comments.csv",
+  "source_sha256": "996cfb53c8ffc42931da9062ffb41cc72deb7778af21c5cd3715a027b0128a95",
+  "total_rows": 2314,
+  "source_posts": 17,
+  "assignment_method": "Sort by post_id and id; round-robin across four members. Annotation assignments are not train/validation/test splits.",
+  "files": [
+    {
+      "file": "thanh_vien_1.csv",
+      "rows": 579,
+      "posts": 17
+    },
+    {
+      "file": "thanh_vien_2.csv",
+      "rows": 579,
+      "posts": 17
+    },
+    {
+      "file": "thanh_vien_3.csv",
+      "rows": 578,
+      "posts": 17
+    },
+    {
+      "file": "thanh_vien_4.csv",
+      "rows": 578,
+      "posts": 17
+    }
+  ]
+}
