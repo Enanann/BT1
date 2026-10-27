@@ -1,0 +1,23 @@
+# Mỗi dòng là link trực tiếp đến một bài đăng trong nhóm PTIT.
+# Xóa dấu # ở ví dụ và thay GROUP_ID, POST_ID bằng thông tin thật.
+# https://www.facebook.com/groups/GROUP_ID/posts/POST_ID/
+# https://www.facebook.com/share/p/1CLvXRDF6C/
+# https://www.facebook.com/groups/2k5ptit/permalink/1131749889034187/
+# https://www.facebook.com/share/p/1AK8YvSGnX/
+# https://www.facebook.com/share/p/1CXGqg2ZT6/
+# https://www.facebook.com/share/p/19sR47zghz/
+# https://www.facebook.com/share/p/1EgbDLNHc3/
+# https://www.facebook.com/share/p/19tWSnUb4r/
+# https://www.facebook.com/groups/2k5ptit/permalink/1154903763385466/
+# https://www.facebook.com/share/p/1C61WEonLK/
+# https://www.facebook.com/groups/2k5ptit/permalink/1255847259957782/
+# D24 phần 1
+# https://www.facebook.com/share/p/19iAqas5LC/
+# D24 phần 2
+# https://www.facebook.com/groups/confessions.ptit/permalink/1437943818190115/
+
+# Cả phần 1 + 2 nên cho vào cùng 1 tập huấn luyện
+
+https://www.facebook.com/share/p/19xijeXGXj/
+https://www.facebook.com/share/p/19DJTjDYfJ/
+https://www.facebook.com/share/p/1KutDFrHgH/

@@ -1,0 +1,6 @@
+.venv/
+.browser-profile*/
+data/
+__pycache__/
+*.pyc
+.runtime-temp/
