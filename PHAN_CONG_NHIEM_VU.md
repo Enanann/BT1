@@ -2,39 +2,87 @@
 ## Đề tài: Phân loại bình luận toxic và non-toxic trong các nhóm Facebook sinh viên PTIT
 
 * **Quy mô nhóm:** 4 thành viên
-* **Phương pháp gán nhãn:** Bán tự động (AI/LLM hỗ trợ điền nhãn sơ bộ + 4 thành viên kiểm duyệt và hoàn thiện)
+* **Phương thức gán nhãn:** **4 thành viên tự phụ trách gán nhãn/kiểm duyệt độc lập file của mình**, sau đó gửi lại cho Người 1 để gộp và xử lý.
 * **Quy ước nhãn:**
   * `0` — **Non-toxic:** Trao đổi bình thường, hỏi đáp, phê bình/góp ý chính sách, dịch vụ trường lớp không có yếu tố xúc phạm, mạ lỵ cá nhân/tập thể.
   * `1` — **Toxic:** Lăng mạ, sỉ nhục, quấy rối, đe dọa, xúc phạm danh dự cá nhân hoặc nhóm người.
 
 ---
 
-## 👤 Người 1: Data & Preprocessing Lead
-*(Phụ trách thu thập, làm sạch, audit dữ liệu và module tiền xử lý)*
+## 🔄 QUY TRÌNH PHỐI HỢP DỮ LIỆU GIỮA 4 NGƯỜI
+
+```text
+       [4 thành viên nhận 4 file trong thư mục annotations/]
+                               │
+   ┌───────────────────────────┼───────────────────────────┐
+   ▼                           ▼                           ▼                           ▼
+👤 Thành viên 1             👤 Thành viên 2             👤 Thành viên 3             👤 Thành viên 4
+(Tự duyệt file 1)           (Tự duyệt file 2)           (Tự duyệt file 3)           (Tự duyệt file 4)
+   │                           │                           │                           │
+   └───────────────────────────┼───────────────────────────┘
+                               │
+           (4 thành viên gửi file đã hoàn thành cho Người 1)
+                               │
+                               ▼
+                        👤 Người 1
+         1. Gộp 4 file thành 1 bộ dữ liệu tổng (2.314 dòng)
+         2. Chạy Preprocessing: chuẩn hóa Unicode, tách từ pyvi
+         3. Chia tập theo post_id thành: train, val, test
+                               │
+         ┌─────────────────────┴─────────────────────┐
+         ▼                                           ▼
+ [train.csv (70%) + val.csv (15%)]               [test.csv (15%)]
+         │                                           │
+         ├──────────────────┐                        │
+         ▼                  ▼                        │
+   👤 Người 2          👤 Người 3                    │
+ (Train 4 Baseline)  (Train PhoBERT)                 │
+         │                  │                        │
+         └─────────┬────────┘                        │
+                   ▼                                 ▼
+            [Bàn giao Models] ────────────────> 👤 Người 4
+                                         (Chấm điểm thi trên test.csv,
+                                          vẽ biểu đồ Dashboard & viết Báo cáo)
+```
+
+---
+
+## 👤 Người 1: Data, Preprocessing & Split Lead
+*(Phụ trách duyệt file 1, nhận file từ nhóm, gộp dữ liệu, chạy tiền xử lý và chia tập)*
 
 ### Các đầu việc chính:
-1. **Gán nhãn & Kiểm duyệt dữ liệu:**
-   * Chạy script AI tự động điền nhãn `0`/`1` và lý do cho toàn bộ 2.314 dòng bình luận.
-   * Rà soát nhanh lại các câu nghi ngờ hoặc câu máy gán nhãn `1` trong file `annotations/thanh_vien_1.csv` (579 câu).
-2. **Xử lý & Chuẩn hóa dữ liệu:**
-   * Viết script `audit_data.py`: Gộp 4 file `thanh_vien_*.csv` thành bộ dữ liệu hoàn chỉnh, kiểm tra tính toàn vẹn (không trùng ID, không còn nhãn trống, lọc bỏ nhiễu/lỗi).
-   * Viết script `make_splits.py`: Chia tập dữ liệu thành **Train (70%) - Validation (15%) - Test (15%) theo nguyên bài viết (`post_id`)** để triệt tiêu hiện tượng rò rỉ dữ liệu (data leakage).
-   * Xây dựng module tiền xử lý văn bản dùng chung `src/preprocessing.py`: Chuẩn hóa Unicode NFC, xử lý khoảng trắng, bảo toàn dấu tiếng Việt, tách từ ghép (`pyvi` hoặc `underthesea`) để Người 2 và Người 3 nạp vào mô hình.
+1. **Tự gán nhãn / duyệt file của mình:**
+   * Tự hoàn thành việc gán nhãn cho file [annotations/thanh_vien_1.csv](file:///d:/BT1/annotations/thanh_vien_1.csv) (579 câu).
+2. **Nhận file & Gộp dữ liệu:**
+   * Thu nhận 3 file đã gán nhãn xong từ Người 2, Người 3 và Người 4.
+   * Viết script `audit_data.py`: Gộp 4 file thành 1 bảng dữ liệu tổng duy nhất (2.314 dòng), kiểm tra không còn dòng trống nhãn, phát hiện dữ liệu lỗi/trùng.
+3. **Chạy Tiền xử lý (Preprocessing):**
+   * Viết module và chạy tiền xử lý `src/preprocessing.py` trên toàn bộ văn bản:
+     * Chuẩn hóa bảng mã tiếng Việt (Unicode NFC).
+     * Xóa khoảng trắng thừa, làm sạch ký tự rác.
+     * **Tách từ ghép tiếng Việt** (ví dụ: *"sinh viên"* $\rightarrow$ *"sinh_viên"*, *"học phí"* $\rightarrow$ *"học_phí"* bằng thư viện `pyvi`).
+4. **Chia tập dữ liệu (Split) & Bàn giao:**
+   * Viết script `make_splits.py`: Cắt bảng dữ liệu đã làm sạch thành 3 file **theo nguyên bài viết (`post_id`)** để chống rò rỉ dữ liệu:
+     * `data/splits/train.csv` (~70%, ~1.600 câu): **Bàn giao cho Người 2 và Người 3**.
+     * `data/splits/val.csv` (~15%, ~350 câu): **Bàn giao cho Người 2 và Người 3**.
+     * `data/splits/test.csv` (~15%, ~350 câu): **Bàn giao cho Người 4**.
 
 ### Sản phẩm bàn giao:
-* `scripts/audit_data.py`
-* `scripts/make_splits.py` (và thư mục `data/splits/` gồm `train.csv`, `val.csv`, `test.csv`)
+* File nhãn hoàn chỉnh `annotations/thanh_vien_1.csv`
+* `scripts/audit_data.py` (script gộp & kiểm tra dữ liệu)
 * Module tiền xử lý `src/preprocessing.py`
+* `scripts/make_splits.py` và 3 file dữ liệu sạch: `train.csv`, `val.csv`, `test.csv`
 
 ---
 
 ## 👤 Người 2: Machine Learning Baseline Lead
-*(Phụ trách các mô hình học máy truyền thống)*
+*(Phụ trách duyệt file 2 và huấn luyện các mô hình học máy truyền thống)*
 
 ### Các đầu việc chính:
-1. **Kiểm duyệt dữ liệu:**
-   * Rà soát nhanh các câu nhãn `1` hoặc câu khó trong file `annotations/thanh_vien_2.csv` (579 câu).
+1. **Tự gán nhãn / duyệt file của mình:**
+   * Tự hoàn thành việc gán nhãn cho file [annotations/thanh_vien_2.csv](file:///d:/BT1/annotations/thanh_vien_2.csv) (579 câu) rồi gửi lại cho Người 1.
 2. **Trích xuất đặc trưng văn bản:**
+   * Nhận `train.csv` và `val.csv` từ Người 1 (dữ liệu này đã được Người 1 làm sạch và tách từ sẵn).
    * Cài đặt 2 phương pháp biểu diễn đặc trưng:
      * **Bag-of-Words (BoW):** Dùng `CountVectorizer` của scikit-learn.
      * **TF-IDF:** Dùng `TfidfVectorizer` của scikit-learn.
@@ -45,54 +93,58 @@
      3. TF-IDF + Multinomial Naive Bayes (`MultinomialNB`)
      4. TF-IDF + Linear SVM (`LinearSVC`)
      *(Bổ sung 1 mô hình đối chứng `DummyClassifier` luôn đoán lớp đa số)*.
-   * Tinh chỉnh siêu tham số trên tập Validation (các giá trị `alpha`, `C`, `ngram_range`).
-   * Lưu các file mô hình tốt nhất (`.joblib`) vào thư mục `models/`.
-   * Xuất bảng kết quả và log thực nghiệm của Baseline bàn giao cho Người 4.
+   * Dùng tập `val.csv` để tinh chỉnh siêu tham số (`alpha`, `C`, `ngram_range`) và chọn ra cấu hình tốt nhất của từng mô hình.
+   * Lưu các file mô hình tốt nhất (`.joblib`) vào thư mục `models/` và bàn giao cho Người 4.
 
 ### Sản phẩm bàn giao:
+* File nhãn hoàn chỉnh `annotations/thanh_vien_2.csv`
 * `scripts/train_baselines.py`
 * Thư mục `models/` chứa các file pipeline Baseline `.joblib`
-* File bảng số liệu `results/baseline_metrics.csv`
+* Bảng tham số tối ưu và kết quả trên tập val bàn giao cho Người 4
 
 ---
 
 ## 👤 Người 3: Deep Learning PhoBERT Lead
-*(Phụ trách mô hình ngôn ngữ ngữ cảnh hiện đại)*
+*(Phụ trách duyệt file 3 và huấn luyện mô hình ngôn ngữ PhoBERT)*
 
 ### Các đầu việc chính:
-1. **Kiểm duyệt dữ liệu:**
-   * Rà soát nhanh các câu nhãn `1` hoặc câu khó trong file `annotations/thanh_vien_3.csv` (578 câu).
+1. **Tự gán nhãn / duyệt file của mình:**
+   * Tự hoàn thành việc gán nhãn cho file [annotations/thanh_vien_3.csv](file:///d:/BT1/annotations/thanh_vien_3.csv) (578 câu) rồi gửi lại cho Người 1.
 2. **Thiết lập & Huấn luyện PhoBERT:**
+   * Nhận `train.csv` và `val.csv` từ Người 1.
    * Thiết lập môi trường PyTorch + Transformers trên máy có GPU (hoặc tạo notebook trên Google Colab / Kaggle).
    * Xây dựng Dataset, DataLoader và Tokenizer cho `vinai/phobert-base`.
    * Viết pipeline fine-tune PhoBERT với đầu phân loại 2 lớp (Toxic / Non-toxic).
-   * Theo dõi loss và validation metric qua từng epoch, lưu lại checkpoint mô hình đạt Macro-F1 cao nhất trên tập Validation.
-   * Đo đạc thời gian huấn luyện và xuất file log kết quả chi tiết bàn giao cho Người 4.
+   * Dùng tập `val.csv` để theo dõi loss và validation metric qua từng epoch, lưu lại checkpoint mô hình đạt Macro-F1 cao nhất.
+   * Bàn giao checkpoint mô hình tốt nhất cho Người 4.
 
 ### Sản phẩm bàn giao:
+* File nhãn hoàn chỉnh `annotations/thanh_vien_3.csv`
 * `scripts/train_phobert.py` (hoặc `notebooks/train_phobert.ipynb`)
 * Thư mục checkpoint mô hình PhoBERT tốt nhất (`models/phobert_best/`)
-* File bảng số liệu `results/phobert_metrics.csv`
+* Bảng log quá trình train bàn giao cho Người 4
 
 ---
 
 ## 👤 Người 4: Evaluation, Visualization & Report Lead
-*(Phụ trách đánh giá mô hình, trực quan hóa so sánh để đưa vào báo cáo và chủ trì viết Báo cáo BTL)*
+*(Phụ trách duyệt file 4, đánh giá trên tập Test, trực quan hóa biểu đồ và chủ trì viết Báo cáo BTL)*
 
 ### Các đầu việc chính:
-1. **Kiểm duyệt dữ liệu:**
-   * Rà soát file `annotations/thanh_vien_4.csv` (578 câu); cùng nhóm rà soát kỹ các câu thuộc tập Test độc lập.
-2. **Đánh giá & So sánh mô hình:**
-   * Viết script `evaluate_models.py`: Nạp tất cả mô hình đã huấn luyện (4 Baseline từ Người 2 + PhoBERT từ Người 3) để chấm điểm trên cùng tập Test.
-   * Tính toán bộ chỉ số cốt lõi: **Accuracy, Precision, Recall, F1 toxic, Macro-F1**.
-   * Lập **Bảng so sánh tổng hợp đối đầu** giữa các phương pháp trích chọn đặc trưng (BoW vs TF-IDF) và thuật toán (Naive Bayes vs SVM vs PhoBERT).
+1. **Tự gán nhãn / duyệt file của mình:**
+   * Tự hoàn thành việc gán nhãn cho file [annotations/thanh_vien_4.csv](file:///d:/BT1/annotations/thanh_vien_4.csv) (578 câu) rồi gửi lại cho Người 1.
+2. **Đánh giá & Chấm điểm mô hình trên tập Test:**
+   * Nhận file `test.csv` từ Người 1 và giữ độc lập (không đưa cho Người 2, 3 lúc họ đang train).
+   * Nhận các mô hình đã chốt từ Người 2 (4 Baseline) và Người 3 (PhoBERT).
+   * Viết script `evaluate_models.py` chạy chấm điểm tất cả mô hình trên tập `test.csv`.
+   * Tính toán các chỉ số: **Accuracy, Precision, Recall, F1 toxic, Macro-F1**.
+   * Lập bảng so sánh đối đầu giữa các phương pháp: BoW vs TF-IDF, Naive Bayes vs SVM vs PhoBERT.
    * Lọc các câu đoán sai (False Positive, False Negative) để làm bảng **Phân tích lỗi (Error Analysis)**.
 3. **Xây dựng Dashboard Trực quan hóa (Visualization Dashboard):**
-   * Xây dựng giao diện trực quan hóa gọn nhẹ (bằng Streamlit hoặc script xuất ảnh `results/`): Mục đích chính là **sinh ra các biểu đồ và bảng số liệu chuẩn đẹp để chụp ảnh/dán thẳng vào Báo cáo**:
-     * **Trực quan hóa dữ liệu:** Biểu đồ tròn tỷ lệ nhãn Toxic/Non-toxic, biểu đồ phân bố bình luận theo bài viết.
-     * **Trực quan hóa so sánh mô hình:** Biểu đồ cột so sánh Macro-F1 và F1-toxic giữa 5 mô hình (thấy rõ sự khác biệt giữa BoW vs TF-IDF, SVM vs NB, Baseline vs PhoBERT).
-     * **Ma trận nhầm lẫn:** Heatmap Confusion Matrix của từng mô hình (hiển thị rõ số lượng TP, FP, TN, FN).
-     * *(Phụ trợ)*: Có một ô nhập text nhanh để test dự đoán tại chỗ nếu giảng viên yêu cầu demo.
+   * Xây dựng giao diện Streamlit gọn nhẹ (`app.py`) hoặc script xuất ảnh tự động để **sinh biểu đồ phục vụ Báo cáo**:
+     * Biểu đồ tròn tỷ lệ nhãn Toxic / Non-toxic, biểu đồ phân bố bình luận theo bài viết.
+     * Biểu đồ cột so sánh Macro-F1 và F1-toxic giữa 5 mô hình.
+     * Heatmap Ma trận nhầm lẫn (Confusion Matrix) của từng mô hình (hiển thị rõ TP, FP, TN, FN).
+     * Ô nhập câu nhanh để demo tại chỗ nếu giảng viên yêu cầu.
 4. **Chủ trì biên soạn Báo cáo BTL & Slide:**
    * Viết file Báo cáo BTL (Word / PDF) hoàn chỉnh:
      * **Chương 1:** Đặt vấn đề, bối cảnh Facebook PTIT, bài toán và định nghĩa nhãn.
@@ -102,36 +154,9 @@
    * Thiết kế Slide thuyết trình (8–12 slide tóm tắt các điểm nổi bật của đề tài).
 
 ### Sản phẩm bàn giao:
+* File nhãn hoàn chỉnh `annotations/thanh_vien_4.csv`
 * `scripts/evaluate_models.py`
-* Dashboard trực quan hóa `app.py` (hoặc bộ script sinh biểu đồ tự động)
+* Dashboard trực quan hóa `app.py`
 * Thư mục `results/` (chứa các file ảnh biểu đồ PNG độ nét cao, `confusion_matrix_*.png`, `error_analysis.csv`)
 * **File Báo cáo BTL hoàn chỉnh (Word / PDF)**
 * **File Slide thuyết trình (PowerPoint / PDF)**
-
----
-
-## Sơ đồ luồng phối hợp (Workflow)
-
-```text
-[2.314 comment thô]
-        │
-        ▼ (AI gán nhãn tự động + 4 thành viên review nhanh)
-[Tập nhãn hoàn chỉnh] 
-        │
-        ▼ (Người 1 audit & chia tập theo post_id)
- ┌──────┴──────────────────────┐
- │ Train (70%) + Val (15%)     │ Test (15% độc lập)
- └──────┬──────────────────────┘        │
-        ├────────────────────────┐      │
-        ▼                        ▼      ▼
- [Người 2: 4 Baseline]    [Người 3: PhoBERT]
-        │                        │
-        └───────────┬────────────┘
-                    ▼
-           [Người 4: Nhận models để Đánh giá & Phân tích lỗi trên tập Test]
-                    │
-           ┌────────┴───────────────────────────┐
-           ▼                                    ▼
- [Người 4: Dựng Demo Dashboard]     [Người 4: Viết Báo cáo BTL & Slide]
- (Chart, Benchmark, Live test,...)   (Tổng hợp toàn bộ kết quả của nhóm)
-```
